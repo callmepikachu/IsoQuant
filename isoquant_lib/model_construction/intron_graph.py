@@ -6,6 +6,7 @@
 ############################################################################
 
 import logging
+import os
 import queue
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
@@ -188,6 +189,17 @@ class IntronGraph:
         self.attach_terminal_positions()
         if self.params.debug:
             self.print_graph()
+
+        # Local exploration hook: workers are spawned fresh, so a parent-process
+        # monkeypatch never sees these objects. Set ISOQUANT_INTRON_GRAPH_DIR to
+        # append each finished graph to nodes.csv / edges.csv. No-op otherwise.
+        dump_dir = os.environ.get("ISOQUANT_INTRON_GRAPH_DIR")
+        if dump_dir:
+            try:
+                from isoquant_graph_dump import dump_constructed_graph
+                dump_constructed_graph(self, dump_dir)
+            except Exception:
+                logger.warning("Failed to dump intron graph to %s", dump_dir, exc_info=True)
 
     def add_edge(self, v1, v2):
         if v1 in self.intron_collector.intron_correction_map:
